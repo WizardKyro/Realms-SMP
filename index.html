@@ -84,6 +84,7 @@
         <div class="navbar">
             <a href="announcements.html" class="btn-blue">Announcements</a>
             <a href="members.html" class="btn-blue">Members List</a>
+            <a href="groups.html" class="btn-blue">Groups</a>
             <a href="rules.html" class="btn-blue">Rules</a>
         </div>
 
@@ -132,10 +133,15 @@
             }
 
             let db = getPlayersDB();
-            db[mcName] = { realName: realName };
+            
+            // Keep existing group and points data if player already exists
+            if (!db[mcName]) {
+                db[mcName] = { realName: realName, eventPoints: 0, group: "None" };
+            } else {
+                db[mcName].realName = realName;
+            }
             savePlayersDB(db);
 
-            // Save BOTH names to the active session tracker
             localStorage.setItem('smp_active_session', mcName);
             localStorage.setItem('smp_active_real_name', realName);
             
@@ -146,7 +152,6 @@
             document.getElementById('auth-form').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             
-            // Check if BOTH inputs equal your exact Admin details
             if (mcName === "WizardofWaterloo" && realName === "Kyrillos") {
                 document.getElementById('welcome-text').innerText = "Logged in as Admin";
             } else {

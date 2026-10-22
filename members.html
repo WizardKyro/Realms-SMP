@@ -11,16 +11,16 @@
         .button-link:hover { background-color: #0056b3; }
         .btn-danger { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
         .btn-save { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-        table { width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; }
+        table { width: 100%; max-width: 950px; margin: 0 auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 12px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         
-        /* Bar Graph Styling */
         .bar-container { background-color: #e0e0e0; border-radius: 4px; width: 100%; height: 20px; overflow: hidden; position: relative; }
         .bar-fill { background-color: #4CAF50; height: 100%; transition: width 0.3s ease; }
         .bar-text { position: absolute; left: 8px; top: 0; font-size: 12px; font-weight: bold; color: black; line-height: 20px; }
-        .point-input { width: 60px; padding: 4px; font-size: 13px; }
+        .point-input { width: 55px; padding: 4px; font-size: 13px; }
+        .group-input { width: 150px; padding: 4px; font-size: 13px; margin-top: 3px; display: block; }
         </style>
     </head>
     <body>
@@ -35,6 +35,7 @@
                 <tr>
                     <th>Minecraft Name</th>
                     <th>Real Name</th>
+                    <th>Groups Joined (Max 2)</th>
                     <th>Event Points Graph</th>
                     <th class="admin-col" style="display: none;">Admin Actions</th>
                 </tr>
@@ -68,32 +69,38 @@
 
             const players = Object.keys(db);
             if (players.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="${isAdmin ? 4 : 3}" style="text-align: center; color: #777;">No registered members.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 4}" style="text-align: center; color: #777;">No registered members.</td></tr>`;
                 return;
             }
 
-            // Find the highest score to make the bar graph scale nicely (max out at 100% width)
             let maxPoints = 0;
             players.forEach(mcName => {
                 const pts = db[mcName].eventPoints || 0;
                 if (pts > maxPoints) maxPoints = pts;
             });
-            if (maxPoints === 0) maxPoints = 10; // Avoid dividing by zero if everyone has 0 points
+            if (maxPoints === 0) maxPoints = 10;
 
             players.forEach(mcName => {
                 const playerData = db[mcName];
                 const realName = playerData.realName || "N/A";
                 const points = playerData.eventPoints || 0;
                 
-                // Calculate percentage width for the visual bar
+                // Read from array, or safely fall back to the old single string item format
+                let groupList = [];
+                if (playerData.groups && Array.isArray(playerData.groups)) {
+                    groupList = playerData.groups;
+                } else if (playerData.group && playerData.group !== "None") {
+                    groupList = [playerData.group];
+                }
+                
+                const groupDisplay = groupList.length > 0 ? groupList.join(', ') : "None";
                 const barPercentage = Math.min((points / maxPoints) * 100, 100);
-
                 const row = document.createElement('tr');
                 
-                // Base player info and visual graph bar
                 row.innerHTML = `
                     <td>${mcName}</td>
                     <td>${realName}</td>
+                    <td style="font-weight: bold; color: ${groupDisplay === 'None' ? '#777' : '#007BFF'}">${groupDisplay}</td>
                     <td>
                         <div class="bar-container">
                             <div class="bar-fill" style="width: ${barPercentage}%;"></div>
@@ -102,13 +109,19 @@
                     </td>
                 `;
 
-                // If logged in as admin, add editing fields and delete buttons
                 if (isAdmin) {
                     row.innerHTML += `
                         <td class="admin-col">
-                            <input type="number" class="point-input" id="input-${mcName}" value="${points}" min="0">
-                            <button class="btn-save" onclick="updatePoints('${mcName}')">Set</button>
-                            <button class="btn-danger" style="margin-left: 10px;" onclick="deleteMember('${mcName}')">Delete</button>
+                            <div style="margin-bottom: 5px;">
+                                <span style="font-size:11px;color:#555;">Points:</span>
+                                <input type="number" class="point-input" id="input-pts-${mcName}" value="${points}" min="0">
+                            </div>
+                            <div>
+                                <span style="font-size:11px;color:#555;">Groups (split with comma):</span>
+                                <input type="text" class="group-input" id="input-group-${mcName}" value="${groupDisplay}">
+                            </div>
+                            <button class="btn-save" style="margin-top: 6px; width: 100%; box-sizing:border-box; margin-left:0;" onclick="updatePlayer('${mcName}')">Save Changes</button>
+                            <button class="btn-danger" style="margin-top: 4px; width: 100%;" onclick="deleteMember('${mcName}')">Delete</button>
                         </td>
                     `;
                 }
@@ -117,16 +130,25 @@
             });
         }
 
-        // Admin-only function to update point values
-        function updatePoints(mcName) {
-            const inputField = document.getElementById(`input-${mcName}`);
-            const newPoints = parseInt(inputField.value, 10) || 0;
+        function updatePlayer(mcName) {
+            const ptsInput = document.getElementById(`input-pts-${mcName}`);
+            const groupInput = document.getElementById(`input-group-${mcName}`);
+            
+            const newPoints = parseInt(ptsInput.value, 10) || 0;
+            const groupRawText = groupInput.value.trim();
+            
+            let newGroupsArray = [];
+            if (groupRawText !== "" && groupRawText.toLowerCase() !== "none") {
+                newGroupsArray = groupRawText.split(',').map(g => g.trim()).filter(g => g !== "");
+            }
             
             let db = getPlayersDB();
             if (db[mcName]) {
                 db[mcName].eventPoints = newPoints;
+                db[mcName].groups = newGroupsArray;
+                if (db[mcName].group) delete db[mcName].group; // Clear old legacy property if it exists
                 savePlayersDB(db);
-                renderTable(); // Refresh UI to update the graph lengths
+                renderTable();
             }
         }
 

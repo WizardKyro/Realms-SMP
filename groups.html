@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Realms SMP - Groups</title>
+        <style>
+        body { background-color: white; font-family: sans-serif; margin: 40px; text-align: center; }
+        h1 { color: black; font-size: 43px; margin-bottom: 30px; }
+        .button-link { display: inline-block; padding: 10px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px; font-size: 14px; margin-bottom: 20px; }
+        .button-link:hover { background-color: #0056b3; }
+        
+        .form-container { max-width: 450px; margin: 0 auto 40px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; background-color: #f9f9f9; text-align: left; }
+        .form-container h3 { margin-top: 0; text-align: center; }
+        .form-container input, .form-container textarea { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn-submit { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 15px; font-weight: bold; }
+        
+        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 20px; }
+        .group-card { border: 1px solid #ddd; border-radius: 8px; width: 220px; padding: 15px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+        .group-logo { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 2px solid #333; margin: 0 auto 10px auto; background-color: #eee; }
+        .group-name { font-size: 18px; font-weight: bold; margin: 5px 0; }
+        .group-desc { font-size: 14px; color: #555; margin-bottom: 15px; word-wrap: break-word; }
+        .cooldown-text { color: #dc3545; font-weight: bold; text-align: center; margin-bottom: 15px; }
+        
+        .btn-join { background-color: #007BFF; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-join:hover { background-color: #0056b3; }
+        .btn-leave { background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-leave:hover { background-color: #bd2130; }
+        </style>
+    </head>
+    <body>
+        <a href="index.html" class="button-link" style="float: left;">Back</a>
+        <br style="clear:both;">
+
+        <h1>SMP Groups</h1>
+
+        <!-- Create Group Form -->
+        <div class="form-container" id="group-creation-box">
+            <h3>Create a New Group</h3>
+            <input type="text" id="group-name" placeholder="Group Name (e.g., Royal Titans)..." required>
+            <textarea id="group-desc" placeholder="Group Description..." rows="3" required></textarea>
+            <input type="text" id="group-logo-url" placeholder="Image Link / URL for Logo..." required>
+            <button class="btn-submit" onclick="createGroup()">Register Group</button>
+        </div>
+        <div id="cooldown-container" class="cooldown-text" style="display:none;"></div>
+
+        <h2>Registered Groups</h2>
+        <div class="grid" id="groups-grid"></div>
+
+        <script>
+        const getPlayersDB = () => JSON.parse(localStorage.getItem('smp_players')) || {};
+        const savePlayersDB = (db) => localStorage.setItem('smp_players', JSON.stringify(db));
+        const getGroupsDB = () => JSON.parse(localStorage.getItem('smp_groups')) || [];
+        const saveGroupsDB = (db) => localStorage.setItem('smp_groups', JSON.stringify(db));
+
+        window.onload = function() {
+            checkCooldown();
+            renderGroups();
+        };
+
+        function checkCooldown() {
+            const currentSession = localStorage.getItem('smp_active_session');
+            if (!currentSession) {
+                document.getElementById('group-creation-box').innerHTML = "<p style='text-align:center; color:#555;'>Please sign in on the main hub page to interact with groups.</p>";
+                return;
+            }
+
+            const lastCreated = localStorage.getItem(`smp_last_group_time_${currentSession}`);
+            if (lastCreated) {
+                const elapsed = Date.now() - parseInt(lastCreated, 10);
+                const twentyFourHours = 24 * 60 * 60 * 1000;
+
+                if (elapsed < twentyFourHours) {
+                    const remainingMs = twentyFourHours - elapsed;
+                    const hoursLeft = Math.floor(remainingMs / (1000 * 60 * 60));
+                    const minsLeft = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    document.getElementById('group-creation-box').style.display = 'none';
+                    const coolDiv = document.getElementById('cooldown-container');
+                    coolDiv.style.display = 'block';
+                    coolDiv.innerText = `Group created! You can build another in ${hoursLeft}h ${minsLeft}m.`;
+                } else {
+                    document.getElementById('group-creation-box').style.display = 'block';
+                    document.getElementById('cooldown-container').style.display = 'none';
+                }
+            }
+        }
+
+        function createGroup() {
+            const currentSession = localStorage.getItem('smp_active_session');
+            if (!currentSession) {
+                alert("You must be logged in to create a group!");
+                return;
+            }
+
+            const name = document.getElementById('group-name').value.trim();
+            const desc = document.getElementById('group-desc').value.trim();
+            let logoUrl = document.getElementById('group-logo-url').value.trim();
+
+            if (!name || !desc || !logoUrl) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            let db = getGroupsDB();
+            db.push({
+                name: name,
+                description: desc,
+                logo: logoUrl,
+                creator: currentSession
+            });
+
+            saveGroupsDB(db);
+            localStorage.setItem(`smp_last_group_time_${currentSession}`, Date.now().toString());
+
+            document.getElementById('group-name').value = '';
+            document.getElementById('group-desc').value = '';
+            document.getElementById('group-logo-url').value = '';
+            
+            checkCooldown();
+            renderGroups();
+        }
+
+        function toggleGroupMembership(groupName) {
+            const currentSession = localStorage.getItem('smp_active_session');
+            if (!currentSession) {
+                alert("Please log in on the hub page first!");
+                return;
+            }
+
+            let playersDB = getPlayersDB();
+            
+            if (!playersDB[currentSession]) {
+                playersDB[currentSession] = { 
+                    realName: localStorage.getItem('smp_active_real_name') || "", 
+                    eventPoints: 0, 
+                    groups: [] 
+                };
+            }
+
+            if (!playersDB[currentSession].groups || !Array.isArray(playersDB[currentSession].groups)) {
+                playersDB[currentSession].groups = [];
+            }
+
+            let myGroups = playersDB[currentSession].groups;
+
+            if (myGroups.includes(groupName)) {
+                playersDB[currentSession].groups = myGroups.filter(g => g !== groupName);
+            } else {
+                if (myGroups.length >= 2) {
+                    alert("You can only be in 2 groups at a time! Leave a group first.");
+                    return;
+                }
+                playersDB[currentSession].groups.push(groupName);
+            }
+
+            savePlayersDB(playersDB);
+            renderGroups();
+        }
+
+        function renderGroups() {
+            const db = getGroupsDB();
+            const grid = document.getElementById('groups-grid');
+            const currentSession = localStorage.getItem('smp_active_session');
+            grid.innerHTML = '';
+
+            if (db.length === 0) {
+                grid.innerHTML = "<p style='color:#777;'>No groups created yet.</p>";
+                return;
+            }
+
+            let playersDB = getPlayersDB();
+            let myGroups = [];
+            if (currentSession && playersDB[currentSession] && Array.isArray(playersDB[currentSession].groups)) {
+                myGroups = playersDB[currentSession].groups;
+            }
+
+            db.forEach(g => {
+                const isMember = myGroups.includes(g.name);
+                const card = document.createElement('div');
+                card.className = 'group-card';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = `
+                    <img src="${g.logo}" class="group-logo" onerror="this.src='https://placehold.co'">
+                    <div class="group-name">${g.name}</div>
+                    <div class="group-desc">${g.description}</div>
+                `;
+                card.appendChild(contentDiv);
+
+                const actionDiv = document.createElement('div');
+                if (currentSession) {
+                    const btn = document.createElement('button');
+                    btn.className = isMember ? 'btn-leave' : 'btn-join';
+                    btn.innerText = isMember ? 'Leave Group' : 'Join Group';
+                    btn.onclick = function() {
+                        toggleGroupMembership(g.name);
+                    };
+                    actionDiv.appendChild(btn);
+                }
+                card.appendChild(actionDiv);
+                grid.appendChild(card);
+            });
+        }
+        </script>
+    </body>
+</html>
