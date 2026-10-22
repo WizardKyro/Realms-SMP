@@ -10,10 +10,17 @@
         .button-link { display: inline-block; padding: 10px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px; font-size: 14px; margin-bottom: 20px; }
         .button-link:hover { background-color: #0056b3; }
         .btn-danger { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        table { width: 100%; max-width: 600px; margin: 0 auto; border-collapse: collapse; }
+        .btn-save { background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        table { width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; }
         th, td { border: 1px solid black; padding: 12px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; }
         tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        /* Bar Graph Styling */
+        .bar-container { background-color: #e0e0e0; border-radius: 4px; width: 100%; height: 20px; overflow: hidden; position: relative; }
+        .bar-fill { background-color: #4CAF50; height: 100%; transition: width 0.3s ease; }
+        .bar-text { position: absolute; left: 8px; top: 0; font-size: 12px; font-weight: bold; color: black; line-height: 20px; }
+        .point-input { width: 60px; padding: 4px; font-size: 13px; }
         </style>
     </head>
     <body>
@@ -28,7 +35,8 @@
                 <tr>
                     <th>Minecraft Name</th>
                     <th>Real Name</th>
-                    <th class="admin-col" style="display: none;">Action</th>
+                    <th>Event Points Graph</th>
+                    <th class="admin-col" style="display: none;">Admin Actions</th>
                 </tr>
             </thead>
             <tbody id="members-table-body"></tbody>
@@ -60,18 +68,66 @@
 
             const players = Object.keys(db);
             if (players.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="${isAdmin ? 3 : 2}" style="text-align: center; color: #777;">No registered members.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="${isAdmin ? 4 : 3}" style="text-align: center; color: #777;">No registered members.</td></tr>`;
                 return;
             }
 
+            // Find the highest score to make the bar graph scale nicely (max out at 100% width)
+            let maxPoints = 0;
             players.forEach(mcName => {
+                const pts = db[mcName].eventPoints || 0;
+                if (pts > maxPoints) maxPoints = pts;
+            });
+            if (maxPoints === 0) maxPoints = 10; // Avoid dividing by zero if everyone has 0 points
+
+            players.forEach(mcName => {
+                const playerData = db[mcName];
+                const realName = playerData.realName || "N/A";
+                const points = playerData.eventPoints || 0;
+                
+                // Calculate percentage width for the visual bar
+                const barPercentage = Math.min((points / maxPoints) * 100, 100);
+
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${mcName}</td><td>${db[mcName].realName || "N/A"}</td>`;
+                
+                // Base player info and visual graph bar
+                row.innerHTML = `
+                    <td>${mcName}</td>
+                    <td>${realName}</td>
+                    <td>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: ${barPercentage}%;"></div>
+                            <span class="bar-text">${points} pts</span>
+                        </div>
+                    </td>
+                `;
+
+                // If logged in as admin, add editing fields and delete buttons
                 if (isAdmin) {
-                    row.innerHTML += `<td class="admin-col"><button class="btn-danger" onclick="deleteMember('${mcName}')">Delete</button></td>`;
+                    row.innerHTML += `
+                        <td class="admin-col">
+                            <input type="number" class="point-input" id="input-${mcName}" value="${points}" min="0">
+                            <button class="btn-save" onclick="updatePoints('${mcName}')">Set</button>
+                            <button class="btn-danger" style="margin-left: 10px;" onclick="deleteMember('${mcName}')">Delete</button>
+                        </td>
+                    `;
                 }
+                
                 tableBody.appendChild(row);
             });
+        }
+
+        // Admin-only function to update point values
+        function updatePoints(mcName) {
+            const inputField = document.getElementById(`input-${mcName}`);
+            const newPoints = parseInt(inputField.value, 10) || 0;
+            
+            let db = getPlayersDB();
+            if (db[mcName]) {
+                db[mcName].eventPoints = newPoints;
+                savePlayersDB(db);
+                renderTable(); // Refresh UI to update the graph lengths
+            }
         }
 
         function deleteMember(mcName) {
