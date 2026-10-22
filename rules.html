@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Realms SMP - Rules</title>
+        <style>
+        body { 
+            background-color: white; 
+            font-family: sans-serif; 
+            margin: 20px; 
+        }
+        h1 { 
+            color: black; 
+            font-size: 43px; 
+            margin: 0px; 
+            text-align: center; 
+        }
+        ol { 
+            max-width: 600px; 
+            margin: 30px auto; 
+            font-size: 18px; 
+            line-height: 1.6; 
+        }
+        li { 
+            margin-bottom: 15px; 
+            position: relative; 
+        }
+        .header-container { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            max-width: 600px; 
+            margin: 0 auto 20px auto; 
+        }
+        .button-link { 
+            display: inline-block; 
+            padding: 10px 20px; 
+            background-color: #007BFF; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            text-align: center; 
+            font-size: 14px; 
+            transition: background-color 0.2s ease;
+        }
+        .button-link:hover { 
+            background-color: #0056b3; 
+        }
+        .btn-danger { 
+            background-color: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-left: 10px; 
+            font-size: 12px; 
+        }
+        .btn-danger:hover {
+            background-color: #bd2130;
+        }
+        .admin-panel { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            border: 2px dashed #007BFF; 
+            border-radius: 8px; 
+            background-color: #f0f7ff; 
+        }
+        .admin-panel h4 {
+            margin: 0 0 10px 0;
+            color: #0056b3;
+        }
+        .admin-panel input { 
+            width: 100%; 
+            padding: 8px; 
+            margin-bottom: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            box-sizing: border-box; 
+        }
+        </style>
+    </head>
+    <body>
+        
+        <div class="header-container">
+            <h1>Server Rules</h1>
+            <a href="hub.html" class="button-link">Back</a>
+        </div>
+
+        <!-- Admin Control Box (Only visible to WizardofWaterloo + Kyrillos) -->
+        <div id="wizard-panel" class="admin-panel" style="display: none;">
+            <h4>🧙‍♂️ Wizard Rule Management</h4>
+            <input type="text" id="new-rule" placeholder="Type a new server rule here...">
+            <button class="button-link" style="border:none; cursor:pointer;" onclick="addRule()">Add Rule</button>
+        </div>
+
+        <!-- The Rules List -->
+        <ol id="rules-list"></ol>
+
+        <script>
+        // Default startup rules if database storage is totally empty
+        const defaultRules = [
+            { text: "No griefing or destroying player bases." },
+            { text: "No hacking, x-raying, or unapproved client mods." },
+            { text: "Respect all members of the server." }
+        ];
+
+        const getRulesDB = () => JSON.parse(localStorage.getItem('smp_rules')) || defaultRules;
+        const saveRulesDB = (db) => localStorage.setItem('smp_rules', JSON.stringify(db));
+
+        // Two-part Admin Verification targeting your exact handles
+        function checkAdminStatus() {
+            const mc = localStorage.getItem('smp_active_session');
+            const real = localStorage.getItem('smp_active_real_name');
+            return (mc === "WizardofWaterloo" && real === "Kyrillos");
+        }
+
+        window.onload = function() {
+            if (checkAdminStatus()) {
+                document.getElementById('wizard-panel').style.display = "block";
+            }
+            renderRules();
+        };
+
+        // Renders rules with dynamic delete actions for admin
+        function renderRules() {
+            const listEl = document.getElementById('rules-list');
+            const rules = getRulesDB();
+            const isAdmin = checkAdminStatus();
+            
+            listEl.innerHTML = '';
+            rules.forEach((rule, index) => {
+                const li = document.createElement('li');
+                li.textContent = rule.text;
+                
+                if (isAdmin) {
+                    li.innerHTML += ` <button class="btn-danger" onclick="deleteRule(${index})">Delete</button>`;
+                }
+                listEl.appendChild(li);
+            });
+        }
+
+        // Adds new rule to storage
+        function addRule() {
+            const txt = document.getElementById('new-rule').value.trim();
+            if (!txt) {
+                alert("Rule text cannot be empty.");
+                return;
+            }
+            
+            let rules = getRulesDB();
+            rules.push({ text: txt });
+            saveRulesDB(rules);
+            
+            document.getElementById('new-rule').value = '';
+            renderRules();
+        }
+
+        // Deletes rule from storage
+        function deleteRule(index) {
+            if (confirm("Are you sure you want to remove this rule?")) {
+                let rules = getRulesDB();
+                rules.splice(index, 1);
+                saveRulesDB(rules);
+                renderRules();
+            }
+        }
+        </script>
+    </body>
+</html>

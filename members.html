@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Realms SMP - Members List</title>
+        <style>
+        body { background-color: white; font-family: sans-serif; margin: 40px; text-align: center; }
+        h1 { color: black; font-size: 43px; margin-bottom: 30px; }
+        .button-link { display: inline-block; padding: 10px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px; font-size: 14px; margin-bottom: 20px; }
+        .button-link:hover { background-color: #0056b3; }
+        .btn-danger { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        table { width: 100%; max-width: 600px; margin: 0 auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        </style>
+    </head>
+    <body>
+        
+        <a href="hub.html" class="button-link" style="float: left;">Back</a>
+        <br style="clear:both;">
+
+        <h1>SMP Members List</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Minecraft Name</th>
+                    <th>Real Name</th>
+                    <th class="admin-col" style="display: none;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="members-table-body"></tbody>
+        </table>
+
+        <script>
+        const getPlayersDB = () => JSON.parse(localStorage.getItem('smp_players')) || {};
+        const savePlayersDB = (db) => localStorage.setItem('smp_players', JSON.stringify(db));
+
+        function checkAdminStatus() {
+            const mc = localStorage.getItem('smp_active_session');
+            const real = localStorage.getItem('smp_active_real_name');
+            return (mc === "WizardofWaterloo" && real === "Kyrillos");
+        }
+
+        window.onload = function() {
+            renderTable();
+        };
+
+        function renderTable() {
+            const db = getPlayersDB();
+            const tableBody = document.getElementById('members-table-body');
+            const isAdmin = checkAdminStatus();
+            
+            tableBody.innerHTML = '';
+            document.querySelectorAll('.admin-col').forEach(col => {
+                col.style.display = isAdmin ? "table-cell" : "none";
+            });
+
+            const players = Object.keys(db);
+            if (players.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="${isAdmin ? 3 : 2}" style="text-align: center; color: #777;">No registered members.</td></tr>`;
+                return;
+            }
+
+            players.forEach(mcName => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${mcName}</td><td>${db[mcName].realName || "N/A"}</td>`;
+                if (isAdmin) {
+                    row.innerHTML += `<td class="admin-col"><button class="btn-danger" onclick="deleteMember('${mcName}')">Delete</button></td>`;
+                }
+                tableBody.appendChild(row);
+            });
+        }
+
+        function deleteMember(mcName) {
+            if (confirm(`Remove ${mcName}?`)) {
+                let db = getPlayersDB();
+                delete db[mcName];
+                savePlayersDB(db);
+                renderTable();
+            }
+        }
+        </script>
+    </body>
+</html>

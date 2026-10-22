@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Realms SMP - Hub</title>
+        <style>
+        body {
+            background-color: rgb(0, 0, 0);
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 43px;
+            margin-top: 40px;
+        }
+        h2 {
+            color: rgb(255, 255, 255);
+            margin: 0px 0px 15px 0px;
+            font-size: 22px;
+            text-align: center;
+        }
+        .navbar {
+            background-color: rgb(91, 91, 91);
+            padding: 16px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn-blue {
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;             
+            display: inline-block;           
+            font-size: 14px;                 
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .btn-blue:hover {
+            background-color: #0056b3;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .login-card {
+            background-color: rgb(40, 40, 40);
+            padding: 25px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .login-card input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #222;
+            color: white;
+            box-sizing: border-box;
+        }
+        .login-card input::placeholder {
+            color: #aaa;
+        }
+        .welcome-msg {
+            color: #28a745;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        </style>
+    </head>
+    <body>
+
+        <!-- Navigation Bar -->
+        <div class="navbar">
+            <a href="announcements.html" class="btn-blue">Announcements</a>
+            <a href="members.html" class="btn-blue">Members List</a>
+            <a href="rules.html" class="btn-blue">Rules</a>
+        </div>
+
+        <h1>Welcome to the Realms SMP</h1>
+        <h2>Join code: realmssmprpg.minehut.gg</h2>
+        <h2>Port (for Bedrock players) 19132</h2>
+        <h2>Server not initialized.</h2>
+        <div class="container">
+            <div class="login-card">
+                <h2>Player Access</h2>
+                
+                <!-- Signed Out Form -->
+                <div id="auth-form">
+                    <input type="text" id="minecraft-name" placeholder="Minecraft Name..." required>
+                    <input type="text" id="real-name" placeholder="Real Name..." required>
+                    <button class="btn-blue" style="width: 100%;" onclick="handleSignIn()">Sign In / Join</button>
+                </div>
+
+                <!-- Signed In Dashboard -->
+                <div id="dashboard" style="display: none;">
+                    <p class="welcome-msg" id="welcome-text"></p>
+                    <button class="btn-blue" style="width: 100%; background-color: #dc3545;" onclick="handleSignOut()">Sign Out</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        const getPlayersDB = () => JSON.parse(localStorage.getItem('smp_players')) || {};
+        const savePlayersDB = (db) => localStorage.setItem('smp_players', JSON.stringify(db));
+
+        window.onload = function() {
+            const activeMC = localStorage.getItem('smp_active_session');
+            const activeReal = localStorage.getItem('smp_active_real_name');
+            if (activeMC) {
+                showDashboard(activeMC, activeReal);
+            }
+        };
+
+        function handleSignIn() {
+            const mcName = document.getElementById('minecraft-name').value.trim();
+            const realName = document.getElementById('real-name').value.trim();
+            
+            if (!mcName || !realName) {
+                alert("Please fill in both fields.");
+                return;
+            }
+
+            let db = getPlayersDB();
+            db[mcName] = { realName: realName };
+            savePlayersDB(db);
+
+            // Save BOTH names to the active session tracker
+            localStorage.setItem('smp_active_session', mcName);
+            localStorage.setItem('smp_active_real_name', realName);
+            
+            showDashboard(mcName, realName);
+        }
+
+        function showDashboard(mcName, realName) {
+            document.getElementById('auth-form').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            // Check if BOTH inputs equal your exact Admin details
+            if (mcName === "WizardofWaterloo" && realName === "Kyrillos") {
+                document.getElementById('welcome-text').innerText = "Logged in as Admin";
+            } else {
+                document.getElementById('welcome-text').innerText = `Logged in as: ${mcName}`;
+            }
+        }
+
+        function handleSignOut() {
+            localStorage.removeItem('smp_active_session');
+            localStorage.removeItem('smp_active_real_name');
+            document.getElementById('auth-form').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('minecraft-name').value = '';
+            document.getElementById('real-name').value = '';
+        }
+        </script>
+    </body>
+</html>

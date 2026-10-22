@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Realms SMP - Announcements</title>
+        <style>
+        body { background-color: white; font-family: sans-serif; margin: 20px; }
+        h1 { color: black; font-size: 43px; margin: 0px; }
+        h2 { color: black; margin: 0px; text-align: center; }
+        h3 { color: black; margin: 0px; text-align: center; }
+        .announcement-header { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        .button-link { display: inline-block; padding: 10px 20px; background-color: #007BFF; color: white; text-decoration: none; border-radius: 5px; text-align: center; font-size: 14px; transition: background-color 0.2s ease; }
+        .button-link:hover { background-color: #0056b3; }
+        .btn-danger { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-danger:hover { background-color: #bd2130; }
+        .announcement-item { margin-bottom: 40px; text-align: center; }
+        .admin-panel { max-width: 500px; margin: 20px auto; padding: 20px; border: 2px dashed #007BFF; border-radius: 8px; background-color: #f0f7ff; }
+        .admin-panel input, .admin-panel textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        </style>
+    </head>
+    <body>
+        
+        <div class="announcement-header">
+            <img src="announcementlogo-Photoroom.png" alt="Announcement logo" width="300" height="200">
+            <h1>Announcements:</h1>
+            <a href="hub.html" class="button-link">Back</a>
+        </div>
+
+        <div id="wizard-panel" class="admin-panel" style="display: none;">
+            <h4>🧙‍♂️ Wizard Admin Control</h4>
+            <input type="text" id="new-title" placeholder="Announcement Title...">
+            <textarea id="new-subtitle" rows="2" placeholder="Subtitle details..."></textarea>
+            <button class="button-link" style="border:none; cursor:pointer;" onclick="addAnnouncement()">Publish Announcement</button>
+        </div>
+
+        <div id="announcements-feed"></div>
+
+        <script>
+        const defaultData = [{ id: "def-1", title: "START OF THE REALMS SMP", subtitle: "We are starting the Realms SMP September 900, 20067" }];
+        const getAnnounceDB = () => JSON.parse(localStorage.getItem('smp_announcements')) || defaultData;
+        const saveAnnounceDB = (db) => localStorage.setItem('smp_announcements', JSON.stringify(db));
+
+        // Two-part Admin Verification Function
+        function checkAdminStatus() {
+            const mc = localStorage.getItem('smp_active_session');
+            const real = localStorage.getItem('smp_active_real_name');
+            return (mc === "WizardofWaterloo" && real === "Kyrillos");
+        }
+
+        window.onload = function() {
+            if (checkAdminStatus()) {
+                document.getElementById('wizard-panel').style.display = "block";
+            }
+            renderAnnouncements();
+        };
+
+        function renderAnnouncements() {
+            const feed = document.getElementById('announcements-feed');
+            const list = getAnnounceDB();
+            const isAdmin = checkAdminStatus();
+            
+            feed.innerHTML = '';
+            list.forEach((item, index) => {
+                const element = document.createElement('div');
+                element.className = 'announcement-item';
+                let delBtn = isAdmin ? `<br><button class="btn-danger" style="margin-top: 10px;" onclick="deleteAnnouncement(${index})">Remove Post</button>` : '';
+                element.innerHTML = `<h2>${item.title}</h2><h3>${item.subtitle}</h3>${delBtn}<h2>--------------------------------------------------------------------</h2>`;
+                feed.appendChild(element);
+            });
+        }
+
+        function addAnnouncement() {
+            const t = document.getElementById('new-title').value.trim();
+            const s = document.getElementById('new-subtitle').value.trim();
+            if (!t || !s) return alert("Fill out fields.");
+            let list = getAnnounceDB();
+            list.unshift({ id: 'p-' + Date.now(), title: t, subtitle: s });
+            saveAnnounceDB(list);
+            document.getElementById('new-title').value = '';
+            document.getElementById('new-subtitle').value = '';
+            renderAnnouncements();
+        }
+
+        function deleteAnnouncement(index) {
+            if (confirm("Delete post?")) {
+                let list = getAnnounceDB();
+                list.splice(index, 1);
+                saveAnnounceDB(list);
+                renderAnnouncements();
+            }
+        }
+        </script>
+    </body>
+</html>
